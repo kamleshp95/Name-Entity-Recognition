@@ -1,12 +1,13 @@
 import sys
 from ner.components.data_ingestion import DataIngestion
 from ner.components.data_transforamation import DataTransformation
+from ner.components.model_trainer import ModelTraining
 from ner.configuration.gcloud import GCloud
 from ner.constants import *
 
-from ner.entity.artifact_entity import (DataIngestionArtifacts,DataTransformationArtifacts)
+from ner.entity.artifact_entity import (DataIngestionArtifacts,DataTransformationArtifacts,ModelTrainingArtifacts)
 
-from ner.entity.config_entity import (DataIngestionConfig,DataTransformationConfig)
+from ner.entity.config_entity import (DataIngestionConfig,DataTransformationConfig,ModelTrainingConfig)
 
 from ner.exception import NerException
 from ner.logger import logging
@@ -16,6 +17,7 @@ class TrainPipeline:
     def __init__(self):
         self.data_ingestion_config = DataIngestionConfig()
         self.data_transformation_config = DataTransformationConfig()
+        self.model_training_config = ModelTrainingConfig()
         self.gcloud = GCloud()
 
     
@@ -55,12 +57,31 @@ class TrainPipeline:
             raise NerException(e, sys) from e
         
 
+    # This method is used to start the model trainer
+    def start_model_training(self, data_transformation_artifacts: DataTransformationArtifacts) -> ModelTrainingArtifacts:
+        logging.info("Entered the start_model_training method of Train pipeline class")
+        try:
+            model_trainer = ModelTraining(
+                model_trainer_config=self.model_training_config,
+                data_transformation_artifacts=data_transformation_artifacts,
+            )
+            model_trainer_artifact = model_trainer.initiate_model_training()
+
+            logging.info("Performed the Model training operation")
+            logging.info("Exited the start_model_training method of Train pipeline class")
+            return model_trainer_artifact
+
+        except Exception as e:
+            raise NerException(e, sys) from e
+        
+
       # This method is used to start the training pipeline
     def run_pipeline(self) -> None:
         try:
             logging.info("Started Model training >>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
             data_ingestion_artifact = self.start_data_ingestion()
             data_transformation_artifacts = self.start_data_transformation(data_ingestion_artifact=data_ingestion_artifact)
+            model_trainer_artifact = self.start_model_training(data_transformation_artifacts=data_transformation_artifacts)
 
         except Exception as e:
             raise NerException(e, sys) from e
